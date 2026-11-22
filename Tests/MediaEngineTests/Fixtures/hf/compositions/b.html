@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"></head><body><template>
+<div id="root" data-composition-id="b" data-start="2" data-duration="2" data-width="360" data-height="640">
+<style>
+#disc { position: absolute; left: 130px; top: 360px; width: 100px; height: 100px; border-radius: 50%; background: #7878FF; }
+</style>
+<div id="disc"></div>
+<script>(function () {
+  const tl = gsap.timeline({ paused: true });
+  tl.fromTo("#disc", { scale: 0.2, opacity: 0.2 }, { scale: 1.6, opacity: 1, duration: 2, ease: "none" }, 0);
+  window.__timelines = window.__timelines || {};
+  window.__timelines["b"] = tl;
+})();</script>
+</div>
+</template></body></html>

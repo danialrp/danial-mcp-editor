@@ -1,0 +1,17 @@
+{
+  "id": "blur.in",
+  "name": "Blur in",
+  "summary": "The clip starts blurred and comes into focus.",
+  "mipmaps": true,
+  "kind": "in",
+  "passes": ["blurInH", "blurInV"],
+  "duration": { "default": 0.6, "min": 0.04, "max": 10 },
+  "parameters": [
+    { "name": "radius", "label": "Start radius", "type": "number", "min": 0, "max": 200, "default": 40, "unit": "px",
+      "summary": "Blur at the first frame, in pixels of a 1080-pixel picture" },
+    { "name": "fade", "label": "Fade in too", "type": "boolean", "default": 0,
+      "summary": "Also fade from transparent while coming into focus" },
+    { "name": "easing", "label": "Easing", "type": "choice", "choices": ["linear", "ease"], "default": 1,
+      "summary": "linear: even speed; ease: slow at both ends" }
+  ]
+}

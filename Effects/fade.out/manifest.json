@@ -1,0 +1,12 @@
+{
+  "id": "fade.out",
+  "name": "Fade out",
+  "summary": "The clip disappears to transparent (black, or whatever is below it) at its end.",
+  "kind": "out",
+  "passes": ["fadeOut"],
+  "duration": { "default": 0.5, "min": 0.04, "max": 10 },
+  "parameters": [
+    { "name": "easing", "label": "Easing", "type": "choice", "choices": ["linear", "ease"], "default": 1,
+      "summary": "linear: even speed; ease: slow at both ends" }
+  ]
+}

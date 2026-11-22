@@ -1,0 +1,37 @@
+{
+  "_type": "video",
+  "id": "abc123XYZ_0",
+  "title": "Sample clip",
+  "fulltitle": "Sample clip",
+  "uploader": "Example Channel",
+  "uploader_id": "@example",
+  "channel": "Example Channel",
+  "channel_id": "UC0000000000000000000000",
+  "upload_date": "20240131",
+  "timestamp": 1706700000,
+  "description": "A short sample.\nSecond line.",
+  "duration": 61.5,
+  "view_count": 12345,
+  "like_count": 678,
+  "comment_count": 9,
+  "width": 1920,
+  "height": 1080,
+  "tags": ["sample", "test"],
+  "webpage_url": "https://www.youtube.com/watch?v=abc123XYZ_0",
+  "thumbnail": "https://img.example.com/default.jpg",
+  "thumbnails": [
+    {"url": "https://img.example.com/small.jpg", "width": 120, "height": 90},
+    {"url": "https://img.example.com/large.jpg", "width": 1280, "height": 720},
+    {"url": "https://img.example.com/unsized.jpg"}
+  ],
+  "formats": [
+    {"format_id": "sb0", "ext": "mhtml", "vcodec": "none", "acodec": "none", "height": 180},
+    {"format_id": "140", "ext": "m4a", "vcodec": "none", "acodec": "mp4a.40.2"},
+    {"format_id": "137", "ext": "mp4", "vcodec": "avc1.640028", "acodec": "none", "height": 1080},
+    {"format_id": "136", "ext": "mp4", "vcodec": "avc1.4d401f", "acodec": "none", "height": 720},
+    {"format_id": "248", "ext": "webm", "vcodec": "vp9", "acodec": "none", "height": 1080},
+    {"format_id": "399", "ext": "mp4", "vcodec": "av01.0.08M.08", "acodec": "none", "height": 1080}
+  ],
+  "subtitles": {"en": [{"ext": "vtt"}], "de": [{"ext": "vtt"}]},
+  "automatic_captions": {"en": [{"ext": "vtt"}], "fr": [{"ext": "vtt"}]}
+}

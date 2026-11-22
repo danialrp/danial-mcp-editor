@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=360, height=640">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 360px; height: 640px; overflow: hidden; background: transparent; }
+#root { position: relative; width: 360px; height: 640px; overflow: hidden; }
+.clip { position: absolute; inset: 0; }
+#bar { position: absolute; left: 0; top: 600px; width: 360px; height: 16px; background: #00FFD8; transform-origin: 0 50%; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="4" data-width="360" data-height="640" data-fps="30">
+  <div id="bar"></div>
+  <div id="a" class="clip" data-composition-id="a" data-composition-src="compositions/a.html" data-start="0" data-duration="2.5" data-width="360" data-height="640"></div>
+  <div id="b" class="clip" data-composition-id="b" data-composition-src="compositions/b.html" data-start="2" data-duration="2" data-width="360" data-height="640"></div>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+tl.fromTo("#bar", { scaleX: 0 }, { scaleX: 1, duration: 4, ease: "none" }, 0);
+window.__timelines = window.__timelines || {};
+window.__timelines["main"] = tl;
+</script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Generator test</title>
+<style>body { font: 16px -apple-system; margin: 20px; } #zone { width: 300px; height: 80px; border: 2px dashed #888; } [contenteditable] { border: 1px solid #888; min-height: 40px; width: 400px; }</style>
+</head>
+<body>
+<input id="name" aria-label="Name" placeholder="Name">
+<input id="pw" type="password" aria-label="Password">
+<div id="prompt" contenteditable="true" role="textbox" aria-label="Prompt"></div>
+<select id="model" aria-label="Model"><option>Fast</option><option>Pro</option></select>
+<button id="go" aria-label="Generate">Generate</button>
+<input id="file" type="file" aria-label="Upload" multiple>
+<button id="pick" aria-label="Choose files" onclick="document.getElementById('hidden').click()">Choose files</button>
+<input id="hidden" type="file" style="display:none" multiple>
+<div id="zone" aria-label="Drop here" tabindex="0">Drop here</div>
+<div role="menu"><div role="menuitemcheckbox" aria-checked="false" tabindex="-1" id="tool" onclick="this.setAttribute('aria-checked', 'true'); log('tool on')">Create image</div></div>
+<p id="log"></p>
+<div id="out"></div>
+<script>
+const log = (s) => { document.getElementById('log').textContent += s + '; '; };
+let clicks = 0;
+document.getElementById('go').addEventListener('click', (e) => {
+  clicks++;
+  const prompt = document.getElementById('prompt').innerText;
+  log('clicked ' + clicks + (e.isTrusted ? ' trusted' : '') + ' prompt=' + prompt + ' model=' + document.getElementById('model').value + ' name=' + document.getElementById('name').value);
+  // "Generate" an image after a short wait, as a blob URL.
+  setTimeout(() => {
+    const c = document.createElement('canvas'); c.width = 320; c.height = 320;
+    const g = c.getContext('2d'); g.fillStyle = '#FF2244'; g.fillRect(0, 0, 320, 320);
+    c.toBlob((b) => { const img = new Image(); img.alt = 'Generated image'; img.src = URL.createObjectURL(b);
+      img.onload = () => { document.getElementById('out').appendChild(img); log('image ready'); }; }, 'image/png');
+  }, 300);
+});
+document.getElementById('hidden').addEventListener('change', (e) => log('chosen ' + [...e.target.files].map(f => f.name).join(',')));
+document.getElementById('file').addEventListener('change', (e) => log('files ' + [...e.target.files].map(f => f.name + ':' + f.size).join(',')));
+const zone = document.getElementById('zone');
+zone.addEventListener('dragover', (e) => e.preventDefault());
+zone.addEventListener('drop', (e) => { e.preventDefault(); log('dropped ' + [...e.dataTransfer.files].map(f => f.name).join(',')); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter') log('enter'); });
+</script>
+</body>
+</html>

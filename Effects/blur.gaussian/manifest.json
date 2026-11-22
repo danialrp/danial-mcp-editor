@@ -1,0 +1,12 @@
+{
+  "id": "blur.gaussian",
+  "name": "Gaussian blur",
+  "summary": "Blurs the whole clip.",
+  "mipmaps": true,
+  "kind": "filter",
+  "passes": ["blurH", "blurV"],
+  "parameters": [
+    { "name": "radius", "label": "Radius", "type": "number", "min": 0, "max": 200, "default": 20, "unit": "px",
+      "summary": "Blur radius in pixels of a 1080-pixel picture; scales with the picture size" }
+  ]
+}

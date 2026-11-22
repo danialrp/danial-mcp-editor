@@ -1,0 +1,21 @@
+{
+  "_type": "playlist",
+  "id": "C0ffee",
+  "title": "Post by example",
+  "uploader": "example",
+  "timestamp": 1700000000,
+  "description": "Three items.",
+  "webpage_url": "https://www.instagram.com/p/C0ffee/",
+  "entries": [
+    {"id": "1", "title": "Photo one", "formats": [],
+     "thumbnails": [{"url": "https://img.example.com/1-320.jpg", "width": 320, "height": 400},
+                    {"url": "https://img.example.com/1-1080.jpg", "width": 1080, "height": 1350}]},
+    {"id": "2", "title": "Video two", "duration": 7.0,
+     "formats": [{"format_id": "v", "ext": "mp4", "vcodec": "avc1.64001f", "acodec": "mp4a.40.2", "height": 1280}],
+     "requested_downloads": [{"filepath": "/tmp/02-2.mp4"}],
+     "thumbnails": [{"url": "https://img.example.com/2-cover.jpg", "width": 1080, "height": 1920}]},
+    {"id": "3", "title": "Photo three",
+     "thumbnails": [{"url": "https://img.example.com/3-a.jpg"}, {"url": "https://img.example.com/3-b.jpg"}]},
+    null
+  ]
+}
