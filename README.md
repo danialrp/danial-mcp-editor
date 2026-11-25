@@ -33,7 +33,7 @@ purpose.
 | **Animate** | Effect plug-ins that are just a folder (manifest + Metal shader), transform keyframes for zooms, freeze frames, still pictures with transparency |
 | **Motion graphics** | HyperFrames (HTML and GSAP) compositions as timeline layers, rendered in slices so a fix re-renders only its part |
 | **Depth** | A person matte (Apple Vision, or imported SAM masks) puts motion elements *behind* the speaker, with a lit outline and a soft shadow on the wall |
-| **Accent colour** | A native picker for the motion-graphics accent: solid or gradient, eyedropper on the video frame, WCAG contrast, CSS out |
+| **Accent colour** | A native picker for the motion-graphics accent: solid, gradient or three colours, eyedropper on the video frame, kit preview, WCAG contrast, CSS out |
 | **Sound** | Voice, music and sound-effect tracks, extract audio for J and L cuts, voice-over recording, transcripts that stay on the right words through every cut |
 | **Reference downloads** | A post from YouTube, Pinterest, Instagram or X by its link, in the app or through MCP: download, contact sheet, captions and loudness for an agent studying a style, then into the Trash |
 | **Images** | A built-in browser agents drive to generate pictures (Google AI Studio, Nano Banana Pro at 4K, every aspect ratio, retries on its own); results land in the media pool |

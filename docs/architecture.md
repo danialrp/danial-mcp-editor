@@ -164,7 +164,15 @@ protocol EditorCommand: Codable, Sendable {
 The journal line is written and flushed before a command is reported as done.
 After a crash the app loads `project.json` and replays the journal (N-4, L-1,
 L-2). The snapshot is rewritten atomically when the journal grows past a set
-size and when the project closes. There is no save button.
+size (1000 lines or 16 MB) and when the project closes. There is no save
+button. Undo still reaches steps older than the snapshot; their undo and redo
+lines carry the project they give, since the journal no longer holds the step
+itself.
+
+Times in tool arguments and commands are limited to 10^9 s (about 31 years),
+and so is the timeline. Values derived from them stay where seconds in JSON
+convert back to the exact tick; saved files are read with a wider limit
+(10^13 s), so a project always opens.
 
 ## 5. Playback and rendering
 
@@ -905,8 +913,12 @@ effects, keyframes and transforms apply as to video.
 ## Accent colour
 
 The owner's accent for motion graphics is project data (`project.setAccent`),
-picked in the app's Accent panel on the video's own frame. Its derived values
-(ink by WCAG contrast on every stop, `--acc-hi` as the first stop mixed
-towards white) follow the hyperframes skill's picker exactly (tested against
-its JavaScript).
+picked in the app's Accent panel on the video's own frame: solid, a two-stop
+gradient, or three colours for cinematic scenes. Its derived values (ink by
+WCAG contrast on every stop, `--acc-hi` as the first stop mixed towards white
+unless the owner picks it by hand) follow the hyperframes skill's picker
+exactly (tested against its JavaScript). The panel's preview is a web view
+with the kit's own CSS on three 1080 × 1920 stages (on the frame, a
+cinematic scene, a full-screen cutaway), so glass, glow and gradient text
+look as in the render.
 

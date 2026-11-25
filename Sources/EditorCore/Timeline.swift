@@ -69,15 +69,22 @@ extension Track {
         guard let i = clipIndex(containing: t), clips[i].start < t else { return nil }
         let c = clips[i]
         let leftDuration = t - c.start
-        let leftSource = Time(ticks: Int64((Double(leftDuration.ticks) * c.speed).rounded()))
         var left = c, right = c
         left.duration = leftDuration
-        left.sourceDuration = leftSource
         right.id = ids.next("clip")
         right.start = t
         right.duration = c.end - t
-        right.sourceStart = c.sourceStart + leftSource
-        right.sourceDuration = c.sourceDuration - leftSource
+        if c.sourceDuration.ticks >= 2 {
+            // Each half reads at least one tick of the file, even on a very
+            // slow clip (a long freeze frame), where a share rounds to nothing.
+            let share = Int64((Double(leftDuration.ticks) * c.speed).rounded())
+            let leftSource = Time(ticks: Swift.min(Swift.max(share, 1), c.sourceDuration.ticks - 1))
+            left.sourceDuration = leftSource
+            right.sourceStart = c.sourceStart + leftSource
+            right.sourceDuration = c.sourceDuration - leftSource
+        } else {
+            // A clip that reads a single tick shows one moment: both halves keep it.
+        }
         // An intro stays at the start and an outro at the end; filters go on
         // both halves. Keyframes are in source time and need no change.
         left.effects = c.effects.filter { $0.kind != .out }

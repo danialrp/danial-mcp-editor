@@ -17,8 +17,8 @@ public struct StoredCommand: Codable, Equatable, Sendable {
         self.args = try JSONValue.parse(CommandRegistry.encode(command))
     }
 
-    public func decoded() throws -> any EditorCommand {
-        try CommandRegistry.decode(name: name, arguments: args.data())
+    public func decoded(stored: Bool = false) throws -> any EditorCommand {
+        try CommandRegistry.decode(name: name, arguments: args.data(), stored: stored)
     }
 }
 
@@ -30,12 +30,20 @@ public struct JournalEntry: Codable, Equatable, Sendable {
     public var op: Op
     public var commands: [StoredCommand]?
     public var at: Date
+    /// For an undo or redo of a step made before the last snapshot, which
+    /// the journal no longer holds: the project the undo or redo gives, and
+    /// the revision the step made. Without them a reopen could not replay it.
+    public var project: Project?
+    public var stepRevision: Int?
 
-    public init(revision: Int, op: Op, commands: [StoredCommand]? = nil, at: Date = Date()) {
+    public init(revision: Int, op: Op, commands: [StoredCommand]? = nil, at: Date = Date(),
+                project: Project? = nil, stepRevision: Int? = nil) {
         self.revision = revision
         self.op = op
         self.commands = commands
         self.at = at
+        self.project = project
+        self.stepRevision = stepRevision
     }
 }
 
@@ -60,6 +68,7 @@ final class ProjectStore {
     private var journalFD: Int32 = -1
     private var lockFD: Int32 = -1
     private(set) var journalCount = 0
+    private(set) var journalBytes = 0
 
     private var snapshotURL: URL { url.appendingPathComponent("project.json") }
     private var journalURL: URL { url.appendingPathComponent("journal.jsonl") }
@@ -112,6 +121,7 @@ final class ProjectStore {
         let entries = try s.readJournal(after: snap.revision)
         try s.openJournal(truncate: false)
         s.journalCount = entries.count
+        s.journalBytes = (try? FileManager.default.attributesOfItem(atPath: s.journalURL.path)[.size] as? Int) ?? 0
         return (s, snap, entries)
     }
 
@@ -133,6 +143,7 @@ final class ProjectStore {
             throw EditorError(.io, "journal flush failed: \(String(cString: strerror(errno)))")
         }
         journalCount += 1
+        journalBytes += line.count
     }
 
     /// Writes a new snapshot and empties the journal.
@@ -140,6 +151,7 @@ final class ProjectStore {
         try writeSnapshot(project, revision: revision)
         try openJournal(truncate: true)
         journalCount = 0
+        journalBytes = 0
     }
 
     func close() {

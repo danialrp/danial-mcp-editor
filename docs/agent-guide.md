@@ -187,8 +187,10 @@ Colour is the owner's work. Change it only when asked.
 ## Accent colour for motion graphics
 
 - The owner picks the accent himself in the app's Accent panel, on the
-  video's own frame (colour wells with an eyedropper, solid or gradient, live
-  preview of the kit's shapes, contrast shown). Never choose, propose or rank
+  video's own frame (colour wells and an eyedropper; solid, gradient or three
+  colours; the light variant mixed or picked by hand; a live preview of the
+  kit on the frame, in a cinematic scene and in a full-screen cutaway;
+  contrast shown). Never choose, propose or rank
   a colour yourself; when `accent_get` returns none, ask him to pick.
 - `accent_writeCSS` puts it into a composition as `accent.css`; link it from
   `index.html`. `accent_export` writes the skill's `accent_pick.json`.

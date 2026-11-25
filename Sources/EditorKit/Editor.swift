@@ -36,6 +36,10 @@ public actor Editor {
         self.prober = prober
     }
 
+    /// Makes a session opened elsewhere the editor's own, for tests that
+    /// need a session made with special options.
+    func adoptForTesting(_ s: EditorSession) { session = s }
+
     public func requireSession() throws -> EditorSession {
         guard let session else {
             throw EditorError(.notFound, "no project is open; call project.open or project.create first")

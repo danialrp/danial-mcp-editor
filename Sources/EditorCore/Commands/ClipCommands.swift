@@ -166,7 +166,9 @@ public struct TrimClip: EditorCommand {
         switch edge {
         case .start:
             guard time < c.end else { throw EditorError.invalid("the start must be before the clip's end (\(c.end.seconds) s)", parameter: "time") }
-            let newSourceStart = c.sourceStart + Time(ticks: Int64((Double((time - c.start).ticks) * speed).rounded()))
+            // At least one tick of the file stays, even on a very slow clip.
+            let moved = Int64((Double((time - c.start).ticks) * speed).rounded())
+            let newSourceStart = c.sourceStart + Time(ticks: Swift.min(moved, c.sourceDuration.ticks - 1))
             c.sourceDuration = c.sourceEnd - newSourceStart
             c.sourceStart = newSourceStart
             c.duration = c.end - time
@@ -174,7 +176,7 @@ public struct TrimClip: EditorCommand {
         case .end:
             guard time > c.start else { throw EditorError.invalid("the end must be after the clip's start (\(c.start.seconds) s)", parameter: "time") }
             c.duration = time - c.start
-            c.sourceDuration = Time(ticks: Int64((Double(c.duration.ticks) * speed).rounded()))
+            c.sourceDuration = Time(ticks: Swift.max(1, Int64((Double(c.duration.ticks) * speed).rounded())))
         }
         try p.checkSource(c.sourceStart, c.sourceDuration, in: a)
         if let h = p.tracks[ti].overlapping(c.range, ignoring: [c.id]).first {
@@ -276,11 +278,13 @@ public struct DuplicateClips: EditorCommand {
 
     public func apply(to p: inout Project) throws {
         var gen = IDGenerator(seed: idSeed!)
+        var fx = IDGenerator(seed: idSeed! + "f")
         for id in ids {
             let (ti, ci) = try p.locate(clip: id)
             try p.tracks[ti].ensureUnlocked()
             var copy = p.tracks[ti].clips[ci]
             copy.id = gen.next("clip")
+            copy.renewEffectIDs(&fx)
             copy.start = copy.end
             p.tracks[ti].insertRippling(copy, ids: &gen)
         }

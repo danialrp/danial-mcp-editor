@@ -146,6 +146,27 @@ public struct PutLook: EditorCommand {
 
     public func apply(to p: inout Project) throws {
         if p.looks.contains(where: { $0.id == look.id }) { throw EditorError(.conflict, "look id \(look.id) already exists") }
+        try requireUnusedID(look.id, in: p)
+        // A profile is a file that may have been edited by hand: the same
+        // rules as for the sliders and colours set one by one.
+        for s in Look.sliders where !s.range.contains(look[slider: s.name]) {
+            throw EditorError.invalid("\(s.name) must be between \(Int(s.range.lowerBound)) and \(Int(s.range.upperBound))", parameter: s.name)
+        }
+        for (band, b) in look.hsl {
+            guard HSLBand(rawValue: band) != nil else {
+                throw EditorError.invalid("no HSL band \(band); bands are \(HSLBand.allCases.map(\.rawValue).joined(separator: ", "))", parameter: "hsl")
+            }
+            for v in [b.hue, b.saturation, b.luminance] where !(-100...100).contains(v) {
+                throw EditorError.invalid("hsl.\(band) values must be between -100 and 100", parameter: "hsl")
+            }
+        }
+        guard look.picked.count <= 4 else { throw EditorError.invalid("a look holds at most 4 picked colours") }
+        var seen = Set<EntityID>()
+        for c in look.picked {
+            try validate(c)
+            guard seen.insert(c.id).inserted else { throw EditorError(.conflict, "picked colour id \(c.id) appears twice", parameter: "id") }
+            try requireUnusedID(c.id, in: p)
+        }
         p.looks.append(look)
     }
 }

@@ -33,6 +33,14 @@ scripts/swift.sh build -c release --product dme && python3 scripts/e2e_recovery.
   that name; beside the other suites it would measure the queue, not the code.
   With `--filter` or `--skip` the script runs just what was asked. Plain
   `swift test` runs all of them together and is no verdict on speed.
+- `FullPropertyTests` sends every command, the read tools and the
+  EditorKit write tools (not the MediaEngine ones, project and settings
+  tools, or the UI), in random order with random arguments, and checks the
+  project's rules, undo, the journal and a reopen after each step. `FP_STEPS=300` makes each run longer and `FP_SALT`
+  (any number) tries other random sequences; run it that way after changing
+  a command. On a crash, `FP_TRACE=<file prefix>` writes each seed's last
+  step to `<prefix>-<seed>`. Every bug it finds also gets a plain case in
+  `FoundByPropertyTests`.
 - The HyperFrames render test runs only when `DME_HF_COMMAND` holds the
   HyperFrames command as a JSON array, for example
   `DME_HF_COMMAND='["npx","--yes","hyperframes"]' scripts/swift.sh test`.

@@ -78,7 +78,7 @@ is implemented.
 | `media.list` / `media.get` | R | Assets with probed properties |
 | `media.probe` | R | Properties of a file that is not imported |
 | `media.relink` | W | Point an asset at a moved file |
-| `media.remove` | W | Remove an unused asset from the pool |
+| `media.remove` | W | Remove an unused asset from the pool, with its transcripts |
 
 ## Timeline structure
 
@@ -202,10 +202,10 @@ is implemented.
 
 | Tool | | Purpose |
 |---|---|---|
-| `project.setAccent` | W | Record the owner's pick: solid or two-stop gradient, angle, light variant. Agents never choose a colour |
-| `accent.get` | R | The pick with --acc, --acc2, --acc-hi, --acc-ink, contrasts (4.5 reads well) and the CSS block |
+| `project.setAccent` | W | Record the owner's pick: solid, two-stop gradient with an angle, or three colours (--c1 --c2 --c3 for cinematic scenes); the light variant mixed from the first colour or picked by hand (`hiColor`). Agents never choose a colour |
+| `accent.get` | R | The pick with --acc, --acc2, --acc-hi, --acc-ink, --c1 to --c3, contrasts (4.5 reads well) and the CSS block |
 | `accent.writeCSS` | M | Write `accent.css` (:root variables) into a composition |
-| `accent.export` | M | Write the hyperframes skill's `accent_pick.json` |
+| `accent.export` | M | Write the hyperframes skill's `accent_pick.json`, and add the pick as a line to `accent_pick_history.jsonl` beside it |
 
 ## Person matte
 

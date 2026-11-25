@@ -24,10 +24,12 @@ public enum CommandRegistry {
     public static func type(named name: String) -> (any EditorCommand.Type)? { byName[name] }
 
     /// Decodes a command from its JSON arguments.
-    public static func decode(name: String, arguments: Data) throws -> any EditorCommand {
+    /// `stored` reads a command from the journal, with the wider time limit
+    /// of saved files: what was applied once must always replay.
+    public static func decode(name: String, arguments: Data, stored: Bool = false) throws -> any EditorCommand {
         guard let t = byName[name] else { throw EditorError(.notFound, "unknown command \(name)") }
         do {
-            return try t.decodeJSON(arguments)
+            return try t.decodeJSON(arguments, stored: stored)
         } catch let e as DecodingError {
             throw EditorError.invalid("bad arguments for \(name): \(describe(e))")
         }
@@ -45,8 +47,10 @@ public enum CommandRegistry {
 }
 
 extension EditorCommand {
-    static func decodeJSON(_ data: Data) throws -> any EditorCommand {
-        try JSONDecoder().decode(Self.self, from: data)
+    static func decodeJSON(_ data: Data, stored: Bool) throws -> any EditorCommand {
+        let d = JSONDecoder()
+        d.userInfo[Time.argumentsKey] = !stored
+        return try d.decode(Self.self, from: data)
     }
 }
 

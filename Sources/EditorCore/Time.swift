@@ -25,10 +25,29 @@ public struct Time: Hashable, Comparable, Sendable, Codable {
 
     public var seconds: Double { Double(ticks) / Double(Self.ticksPerSecond) }
 
+    /// The largest time a tool argument or command may give, either sign
+    /// (about 31 years). Values a project derives from such times (a word
+    /// plus an offset, a keyframe on a fast clip) stay where seconds in JSON
+    /// still convert back to the exact tick.
+    public static let maxSeconds: Double = 1e9
+
+    /// The longest a timeline may run.
+    public static let maxTimelineSeconds: Double = maxSeconds
+
+    /// What a saved project may hold: wider than `maxSeconds`, so a project
+    /// always opens again, and small enough that tick counts cannot overflow.
+    public static let maxStoredSeconds: Double = 1e13
+
+    /// Set to true in a decoder's `userInfo` for tool arguments and commands,
+    /// which `maxSeconds` limits; project files are read with the wider limit.
+    public static let argumentsKey = CodingUserInfoKey(rawValue: "dme.timeArguments")!
+
     public init(from decoder: Decoder) throws {
         let s = try decoder.singleValueContainer().decode(Double.self)
-        guard s.isFinite else {
-            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "time must be a finite number of seconds"))
+        let limit = decoder.userInfo[Self.argumentsKey] as? Bool == true ? Self.maxSeconds : Self.maxStoredSeconds
+        guard s.isFinite, abs(s) <= limit else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath,
+                                                    debugDescription: "time must be a number of seconds between -\(Int(limit)) and \(Int(limit))"))
         }
         self.init(seconds: s)
     }

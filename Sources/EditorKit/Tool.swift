@@ -93,7 +93,13 @@ public struct Args: Sendable {
         }
     }
 
-    public func time(_ k: String) throws -> Time? { try double(k).map(Time.init(seconds:)) }
+    public func time(_ k: String) throws -> Time? {
+        guard let s = try double(k) else { return nil }
+        guard s.isFinite, abs(s) <= Time.maxSeconds else {
+            throw EditorError.invalid("\(k) must be between -\(Int(Time.maxSeconds)) and \(Int(Time.maxSeconds)) seconds", parameter: k)
+        }
+        return Time(seconds: s)
+    }
 
     /// The arguments without the given keys, as a JSON object.
     public func json(removing keys: Set<String> = []) -> JSONValue {

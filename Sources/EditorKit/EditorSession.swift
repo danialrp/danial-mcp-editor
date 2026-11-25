@@ -45,6 +45,10 @@ public actor EditorSession {
         var commands: [StoredCommand]
         var before: Project
         var after: Project
+        /// A reopen can rebuild this step from the journal since the last
+        /// snapshot. False for steps older than the snapshot: their undo and
+        /// redo entries then carry the project themselves.
+        var journaled = true
     }
 
     private init(store: ProjectStore, project: Project, revision: Int, undoDepth: Int, compactEvery: Int) {
@@ -107,6 +111,7 @@ public actor EditorSession {
             }
             applied.append(try StoredCommand(c))
         }
+        try p.checkLimits()
         if dryRun { return ApplyResult(revision: revision, dryRun: true, applied: applied) }
         try commit(.apply, commands: applied, before: project, after: p)
         return ApplyResult(revision: revision, dryRun: false, applied: applied)
@@ -118,9 +123,12 @@ public actor EditorSession {
 
     @discardableResult
     public func undo() throws -> Int {
-        guard let step = undoStack.last else { throw EditorError.invalid("nothing to undo") }
-        try store.append(JournalEntry(revision: revision + 1, op: .undo))
+        guard var step = undoStack.last else { throw EditorError.invalid("nothing to undo") }
+        try store.append(step.journaled ? JournalEntry(revision: revision + 1, op: .undo)
+                                        : JournalEntry(revision: revision + 1, op: .undo, commands: step.commands,
+                                                       project: step.before, stepRevision: step.revision))
         undoStack.removeLast()
+        step.journaled = true
         redoStack.append(step)
         project = step.before
         revision += 1
@@ -132,9 +140,12 @@ public actor EditorSession {
 
     @discardableResult
     public func redo() throws -> Int {
-        guard let step = redoStack.last else { throw EditorError.invalid("nothing to redo") }
-        try store.append(JournalEntry(revision: revision + 1, op: .redo))
+        guard var step = redoStack.last else { throw EditorError.invalid("nothing to redo") }
+        try store.append(step.journaled ? JournalEntry(revision: revision + 1, op: .redo)
+                                        : JournalEntry(revision: revision + 1, op: .redo, commands: step.commands,
+                                                       project: step.after, stepRevision: step.revision))
         redoStack.removeLast()
+        step.journaled = true
         undoStack.append(step)
         project = step.after
         revision += 1
@@ -176,7 +187,7 @@ public actor EditorSession {
     public var canRedo: Bool { !redoStack.isEmpty }
 
     public func history(since: Int = 0, limit: Int = 100) -> [HistoryRecord] {
-        Array(records.filter { $0.revision > since }.suffix(limit))
+        Array(records.filter { $0.revision > since }.suffix(max(0, limit)))
     }
 
     // MARK: private
@@ -193,8 +204,21 @@ public actor EditorSession {
         try compactIfNeeded()
     }
 
+    /// A journal this large is folded into the snapshot whatever its length.
+    static let compactBytes = 16 << 20
+
     private func compactIfNeeded() throws {
-        if store.journalCount >= compactEvery { try store.compact(project, revision: revision) }
+        // Lines, or bytes: an undo of a step older than the snapshot carries
+        // the whole project.
+        if store.journalCount >= compactEvery || store.journalBytes >= Self.compactBytes { try compact() }
+    }
+
+    /// Writes a snapshot and empties the journal; the steps in memory can no
+    /// longer be rebuilt from it.
+    private func compact() throws {
+        try store.compact(project, revision: revision)
+        for i in undoStack.indices { undoStack[i].journaled = false }
+        for i in redoStack.indices { redoStack[i].journaled = false }
     }
 
     /// Re-applies journal entries after a crash or a normal close.
@@ -206,25 +230,37 @@ public actor EditorSession {
             switch e.op {
             case .apply:
                 var p = project
-                for c in e.commands ?? [] { try c.decoded().apply(to: &p) }
+                for c in e.commands ?? [] { try c.decoded(stored: true).apply(to: &p) }
                 revision += 1
                 undoStack.append(Step(revision: revision, commands: e.commands ?? [], before: project, after: p))
                 if undoStack.count > undoDepth { undoStack.removeFirst() }
                 redoStack.removeAll()
                 project = p
             case .undo:
-                guard let s = undoStack.popLast() else { throw EditorError(.io, "journal undo at revision \(e.revision) has nothing to undo") }
+                let s: Step
+                if let p = e.project {
+                    s = Step(revision: e.stepRevision ?? e.revision - 1, commands: e.commands ?? [], before: p, after: project)
+                } else {
+                    guard let top = undoStack.popLast() else { throw EditorError(.io, "journal undo at revision \(e.revision) has nothing to undo") }
+                    s = top
+                }
                 redoStack.append(s)
                 project = s.before
                 revision += 1
             case .redo:
-                guard let s = redoStack.popLast() else { throw EditorError(.io, "journal redo at revision \(e.revision) has nothing to redo") }
+                let s: Step
+                if let p = e.project {
+                    s = Step(revision: e.stepRevision ?? e.revision - 1, commands: e.commands ?? [], before: project, after: p)
+                } else {
+                    guard let top = redoStack.popLast() else { throw EditorError(.io, "journal redo at revision \(e.revision) has nothing to redo") }
+                    s = top
+                }
                 undoStack.append(s)
                 project = s.after
                 revision += 1
             }
             records.append(HistoryRecord(revision: revision, op: e.op, commands: e.commands, at: e.at))
         }
-        if !entries.isEmpty { try store.compact(project, revision: revision) }
+        if !entries.isEmpty { try compact() }
     }
 }

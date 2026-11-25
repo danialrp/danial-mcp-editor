@@ -302,6 +302,10 @@ public struct Clip: Codable, Equatable, Sendable, Identifiable {
         fadeIn = Time(ticks: inTicks)
         fadeOut = Time(ticks: min(fadeOut.ticks, duration.ticks - inTicks))
     }
+    /// New ids for the effects of a copy: every id in a project is unique.
+    mutating func renewEffectIDs(_ gen: inout IDGenerator) {
+        for i in effects.indices { effects[i].id = gen.next("fx") }
+    }
     public var range: TimeRange { TimeRange(start: start, duration: duration) }
     public var speed: Double { Double(sourceDuration.ticks) / Double(duration.ticks) }
 
@@ -479,6 +483,15 @@ public struct Project: Codable, Equatable, Sendable {
     }
 
     public var duration: Time { tracks.map(\.end).max() ?? .zero }
+
+    /// Refuses a project whose timeline runs past `Time.maxTimelineSeconds`,
+    /// checked once after every step.
+    public func checkLimits() throws {
+        let limit = Time(seconds: Time.maxTimelineSeconds)
+        if duration > limit || markers.contains(where: { $0.time > limit }) {
+            throw EditorError.invalid("the timeline would run past \(Int(Time.maxTimelineSeconds)) s; use shorter clips, holds or times")
+        }
+    }
 
     public func trackIndex(_ id: EntityID) throws -> Int {
         guard let i = tracks.firstIndex(where: { $0.id == id }) else {

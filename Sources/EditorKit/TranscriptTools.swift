@@ -69,15 +69,22 @@ extension ToolCatalog {
             Parameter("path", .string, "JSON file", required: true),
             Parameter("asset", .id, "Media asset the words belong to", required: true),
             Parameter("offset", .seconds, "Add this to every time, when the file was transcribed from a later start"),
-            Parameter("language", .string, "Language code; default from the file or fa"),
+            Parameter("language", .string, "Language code; default from the file or en"),
         ] + writeOptions) { editor, args in
             let session = try await editor.requireSession()
             let url = URL(fileURLWithPath: (try args.requiredString("path") as NSString).expandingTildeInPath)
-            let json = try JSONValue.parse(Data(contentsOf: url))
+            guard let data = FileManager.default.contents(atPath: url.path) else {
+                throw EditorError(.notFound, "cannot read \(url.path); give the path of a transcript JSON file")
+            }
+            let json: JSONValue
+            do { json = try JSONValue.parse(data) } catch {
+                throw EditorError.invalid("\(url.lastPathComponent) is not JSON; give a transcript with words (text, start, end)", parameter: "path")
+            }
             let raw = json["words"]?.arrayValue ?? (json["segments"]?.arrayValue ?? []).flatMap { $0["words"]?.arrayValue ?? [] }
             let offset = try args.time("offset") ?? .zero
             let words: [TranscriptWord] = raw.compactMap { w in
-                guard let text = (w["text"] ?? w["word"])?.stringValue, let s = w["start"]?.doubleValue, let e = w["end"]?.doubleValue else { return nil }
+                guard let text = (w["text"] ?? w["word"])?.stringValue, let s = w["start"]?.doubleValue, let e = w["end"]?.doubleValue,
+                      abs(s) <= Time.maxSeconds, abs(e) <= Time.maxSeconds else { return nil }
                 return TranscriptWord(text: text.trimmingCharacters(in: .whitespaces), start: Time(seconds: s) + offset, end: Time(seconds: e) + offset)
             }.sorted { $0.start < $1.start }
             guard let first = words.first, let last = words.last else { throw EditorError.invalid("no words found in \(url.path)") }

@@ -137,7 +137,9 @@ public enum ToolCatalog {
             Parameter("detail", .boolean, "Include each command's arguments"),
         ]) { editor, args in
             let s = try await editor.requireSession()
-            let recs = await s.history(since: try args.int("since") ?? 0, limit: try args.int("limit") ?? 50)
+            let limit = try args.int("limit") ?? 50
+            guard limit > 0 else { throw EditorError.invalid("limit must be positive", parameter: "limit") }
+            let recs = await s.history(since: try args.int("since") ?? 0, limit: limit)
             let detail = try args.bool("detail") ?? false
             return .object([
                 "revision": .number(Double(await s.revision)),

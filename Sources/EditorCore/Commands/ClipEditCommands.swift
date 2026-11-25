@@ -33,6 +33,7 @@ public struct CopyClipsTo: EditorCommand {
 
     private func paste(_ p: inout Project) throws {
         var gen = IDGenerator(seed: idSeed!)
+        var fx = IDGenerator(seed: idSeed! + "f")
         let found = try ids.map { id -> (Int, Clip) in let (t, c) = try p.locate(clip: id); return (t, p.tracks[t].clips[c]) }
         let first = found.map(\.1.start).min()!
         // Latest first, so inserting on the main track does not move the others' places.
@@ -40,6 +41,7 @@ public struct CopyClipsTo: EditorCommand {
             try p.tracks[t].ensureUnlocked()
             var copy = c
             copy.id = gen.next("clip")
+            copy.renewEffectIDs(&fx)
             copy.start = start + (c.start - first)
             if p.tracks[t].kind == .main { p.tracks[t].insertRippling(copy, ids: &gen) } else { try p.tracks[t].place(copy) }
         }
@@ -71,7 +73,11 @@ public struct NudgeClips: EditorCommand {
     }
 
     private func nudge(_ p: inout Project) throws {
-        let by = Time(ticks: p.settings.frameRate.frameDuration.ticks * Int64(frames))
+        let (byTicks, overflow) = p.settings.frameRate.frameDuration.ticks.multipliedReportingOverflow(by: Int64(frames))
+        guard !overflow, Double(abs(byTicks)) <= Time.maxSeconds * Double(Time.ticksPerSecond) else {
+            throw EditorError.invalid("frames is too large; a nudge moves clips by whole frames, for example 1 or -10", parameter: "frames")
+        }
+        let by = Time(ticks: byTicks)
         let moving = Set(ids)
         var placed: [(Int, Clip)] = []
         for id in ids {

@@ -85,9 +85,16 @@ public struct SetMediaPath: EditorCommand {
 
     public func apply(to p: inout Project) throws {
         guard let i = p.media.firstIndex(where: { $0.id == id }) else { throw EditorError.notFound("media asset", id) }
+        var relinked = p.media[i]
+        relinked.info = info
         for t in p.tracks {
-            for c in t.clips where c.asset == id && c.sourceEnd > info.duration {
-                throw EditorError(.conflict, "the new file is shorter than clip \(c.id) needs (\(c.sourceEnd.seconds) s)")
+            for c in t.clips where c.asset == id {
+                if c.sourceEnd > info.duration {
+                    throw EditorError(.conflict, "the new file is shorter than clip \(c.id) needs (\(c.sourceEnd.seconds) s)")
+                }
+                do { try p.checkAsset(relinked, fits: t.kind) } catch let e as EditorError {
+                    throw EditorError(.conflict, "the new file cannot serve clip \(c.id) on track \(t.id): \(e.message)")
+                }
             }
         }
         p.media[i].path = path
@@ -127,7 +134,7 @@ public struct SetMediaMatte: EditorCommand {
 
 public struct RemoveMedia: EditorCommand {
     public static let name = "media.remove"
-    public static let spec = CommandSpec("Remove media assets that no clip uses. The files are not touched.", [
+    public static let spec = CommandSpec("Remove media assets that no clip uses, with their transcripts. The files are not touched.", [
         Parameter("ids", .array(.id), "Media asset ids", required: true),
     ])
 
@@ -144,6 +151,7 @@ public struct RemoveMedia: EditorCommand {
             }
         }
         p.media.removeAll { set.contains($0.id) }
+        p.transcripts.removeAll { set.contains($0.asset) }
     }
 }
 

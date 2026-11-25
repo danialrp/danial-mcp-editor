@@ -9,6 +9,19 @@ extension ToolCatalog {
         editor.settings.directory.appendingPathComponent("looks", isDirectory: true)
     }
 
+    /// A saved profile, with an error an agent can act on when the file is
+    /// damaged (profiles are plain files that can be edited by hand).
+    static func readProfile(_ url: URL, _ name: String) throws -> Look {
+        guard let data = FileManager.default.contents(atPath: url.path) else {
+            throw EditorError(.notFound, "no profile named \(name); see look.listProfiles")
+        }
+        do {
+            return try JSONDecoder().decode(Look.self, from: data)
+        } catch let e as DecodingError {
+            throw EditorError.invalid("profile \(name) is damaged (\(describe(e))); save it again or delete it")
+        }
+    }
+
     static func profileURL(_ editor: Editor, _ name: String) throws -> URL {
         let clean = name.trimmingCharacters(in: .whitespaces)
         guard !clean.isEmpty, !clean.contains("/"), !clean.hasPrefix(".") else {
@@ -72,7 +85,7 @@ extension ToolCatalog {
             if FileManager.default.fileExists(atPath: to.path) {
                 throw EditorError(.conflict, "a profile named \(try args.requiredString("newName")) exists; delete it or choose another name")
             }
-            var l = try JSONDecoder().decode(Look.self, from: Data(contentsOf: from))
+            var l = try readProfile(from, try args.requiredString("name"))
             l.name = try args.requiredString("newName").trimmingCharacters(in: .whitespaces)
             try JSON.prettyEncoder.encode(l).write(to: to, options: .atomic)
             try FileManager.default.trashItem(at: from, resultingItemURL: nil)
@@ -95,11 +108,11 @@ extension ToolCatalog {
         ] + writeOptions) { editor, args in
             let session = try await editor.requireSession()
             let url = try profileURL(editor, try args.requiredString("name"))
-            guard let data = FileManager.default.contents(atPath: url.path) else {
-                throw EditorError(.notFound, "no profile named \(try args.requiredString("name"))")
-            }
-            var l = try JSONDecoder().decode(Look.self, from: data)
+            var l = try readProfile(url, try args.requiredString("name"))
             l.id = .random("look")
+            // Every id in a project is unique, so a profile loaded twice
+            // needs new ids for its picked colours too.
+            for i in l.picked.indices { l.picked[i].id = .random("color") }
             var commands: [any EditorCommand] = [PutLook(look: l)]
             let clips = try args.strings("clips")?.map { EntityID($0) }
             let tracks = try args.strings("tracks")?.map { EntityID($0) }

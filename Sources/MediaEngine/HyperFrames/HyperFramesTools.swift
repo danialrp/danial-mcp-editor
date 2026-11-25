@@ -17,10 +17,30 @@ public enum HyperFramesTools {
         let r = { (v: Double) in JSONValue.number((v * 100).rounded() / 100) }
         return .object([
             "mode": .string(a.mode.rawValue), "stops": .array(a.used.map { .string($0) }), "angle": .number(a.angle),
-            "hiPercent": .number(a.hiPercent), "acc": .string(a.acc), "acc2": .string(a.acc2), "accHi": .string(a.accHi),
+            "hiPercent": .number(a.hiPercent), "hiMode": .string(a.hiManual ? "manual" : "auto"),
+            "acc": .string(a.acc), "acc2": .string(a.acc2), "accHi": .string(a.accHi),
+            "c1": .string(a.c1), "c2": .string(a.c2), "c3": .string(a.c3),
             "ink": .string(a.ink), "inkContrast": r(a.inkContrast), "darkInkContrast": r(a.inkContrasts.dark),
             "whiteInkContrast": r(a.inkContrasts.white), "glassContrast": r(a.glassContrast),
             "readable": .bool(a.inkContrast >= 4.5), "css": .string(a.css),
+        ])
+    }
+
+    /// The pick as the hyperframes skill's picker saves it (accent_pick.json).
+    static func skillPick(_ a: Accent, savedAt: Date) -> JSONValue {
+        let r = { (v: Double) in JSONValue.number((v * 100).rounded() / 100) }
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return .object([
+            "mode": .string(["solid": "solid", "gradient": "grad", "three": "tri"][a.mode.rawValue] ?? a.mode.rawValue),
+            "stops": .array(a.used.map { .string($0) }),
+            "angle": a.mode == .gradient ? .number(a.angle) : .null,
+            "hi_pct": a.hiManual ? .null : .number(a.hiPercent), "hi_mode": .string(a.hiManual ? "manual" : "auto"),
+            "acc": .string(a.acc), "acc2": .string(a.acc2), "c1": .string(a.c1), "c2": .string(a.c2), "c3": .string(a.c3),
+            "acc_hi": .string(a.accHi), "acc_ink": .string(a.ink),
+            "ink_contrast": r(a.inkContrast), "glass_contrast": r(a.glassContrast),
+            "frame": .null, "css": .string(a.css), "saved_at": .string(f.string(from: savedAt)),
         ])
     }
 
@@ -214,12 +234,12 @@ public enum HyperFramesTools {
                 await media.invalidate()
                 return .object(["revision": try await refresh(c) ?? .null])
             })
-        tools.append(Tool("accent.get", .read, "The project's accent colour for motion graphics as the owner picked it (project.setAccent, or the Accent panel in the app): mode, stops, angle, the derived --acc, --acc2, --acc-hi and --acc-ink, contrast of the ink and on the dark glass (4.5 or more reads well), and the CSS block. Never choose a colour yourself; when there is none, ask the owner to pick one in the Accent panel.") { editor, _ in
+        tools.append(Tool("accent.get", .read, "The project's accent colour for motion graphics as the owner picked it (project.setAccent, or the Accent panel in the app): mode, stops, angle, the derived --acc, --acc2, --acc-hi (mixed or picked by hand), --acc-ink and --c1 --c2 --c3, contrast of the ink and on the dark glass (4.5 or more reads well), and the CSS block. Never choose a colour yourself; when there is none, ask the owner to pick one in the Accent panel.") { editor, _ in
                 let p = await (try await editor.requireSession()).project
                 guard let a = p.accent else { return .object(["accent": .null]) }
                 return Self.accentJSON(a)
             })
-        tools.append(Tool("accent.writeCSS", .manage, "Write the project's accent as CSS variables into a composition: accent.css with :root { --acc ... } (link it from index.html, or the kit css can import it). Slices that use it render again.", [
+        tools.append(Tool("accent.writeCSS", .manage, "Write the project's accent as CSS variables into a composition: accent.css with :root { --acc ... } (and --c1 --c2 --c3 for three colours) (link it from index.html, or the kit css can import it). Slices that use it render again.", [
                 Parameter("id", .id, "Composition id", required: true),
                 Parameter("path", .string, "File inside the composition; default accent.css"),
             ]) { editor, args in
@@ -232,24 +252,32 @@ public enum HyperFramesTools {
                 await media.invalidate()
                 return .object(["written": .string(url.path), "css": .string(a.css)])
             })
-        tools.append(Tool("accent.export", .manage, "Write the accent as the hyperframes skill's accent_pick.json (mode, stops, angle, hi_pct, acc, acc2, acc_hi, acc_ink, contrasts, css), for the skill's flow.", [
+        tools.append(Tool("accent.export", .manage, "Write the accent as the hyperframes skill's accent_pick.json (mode solid, grad or tri, stops, angle, hi_pct, hi_mode, acc, acc2, c1, c2, c3, acc_hi, acc_ink, contrasts, css, saved_at), for the skill's flow. Every export is also added as a line to accent_pick_history.jsonl beside it.", [
                 Parameter("path", .string, "File to write, for example accent/accent_pick.json", required: true),
             ]) { editor, args in
                 let p = await (try await editor.requireSession()).project
                 guard let a = p.accent else { throw EditorError(.notFound, "the project has no accent yet; the owner picks it in the Accent panel") }
                 let url = URL(fileURLWithPath: (try args.requiredString("path") as NSString).expandingTildeInPath)
-                let o: [String: JSONValue] = [
-                    "mode": .string(a.mode == .gradient ? "grad" : "solid"), "stops": .array(a.used.map { .string($0) }),
-                    "angle": a.mode == .gradient ? .number(a.angle) : .null, "hi_pct": .number(a.hiPercent),
-                    "acc": .string(a.acc), "acc2": .string(a.acc2), "acc_hi": .string(a.accHi), "acc_ink": .string(a.ink),
-                    "ink_contrast": .number((a.inkContrast * 100).rounded() / 100), "glass_contrast": .number((a.glassContrast * 100).rounded() / 100),
-                    "css": .string(a.css),
-                ]
-                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                let pick = Self.skillPick(a, savedAt: Date())
+                let dir = url.deletingLastPathComponent()
+                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
                 let enc = JSONEncoder()
                 enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-                try enc.encode(JSONValue.object(o)).write(to: url, options: .atomic)
-                return .object(["written": .string(url.path)])
+                try enc.encode(pick).write(to: url, options: .atomic)
+                // Every save is kept, as the skill's picker keeps them.
+                let history = dir.appendingPathComponent("accent_pick_history.jsonl")
+                let line = JSONEncoder()
+                line.outputFormatting = [.sortedKeys]
+                var row = try line.encode(pick)
+                row.append(0x0A)
+                if let h = try? FileHandle(forWritingTo: history) {
+                    defer { try? h.close() }
+                    try h.seekToEnd()
+                    try h.write(contentsOf: row)
+                } else {
+                    try row.write(to: history, options: .atomic)
+                }
+                return .object(["written": .string(url.path), "history": .string(history.path)])
             })
         tools.append(Tool("hf.check", .read, "HyperFrames lint of a composition: errors and warnings.", [
                 Parameter("id", .id, "Composition id", required: true),
